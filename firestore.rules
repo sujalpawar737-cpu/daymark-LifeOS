@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+    function text(v, max) { return v is string && v.size() <= max; }
+    function date(v) { return v is string && v.matches('^\\d{4}-\\d{2}-\\d{2}$'); }
+    function allowed(keys) { return request.resource.data.keys().hasOnly(keys); }
+    function idMatches(id) { return request.resource.data.id == id; }
+    function validHabit(id) { let d=request.resource.data; return allowed(['id','title','category','icon','color','type','target','unit','frequency','days','startDate','endDate','time','notes','enabled','archived','order','createdAt']) && idMatches(id) && text(d.title,100) && d.title.size()>0 && text(d.category,40) && text(d.icon,8) && text(d.color,20) && d.type in ['binary','count','duration','numeric'] && d.target is number && d.target>0 && d.target<=1000000 && text(d.unit,24) && d.frequency in ['daily','weekdays','weekends','custom'] && d.days is list && d.days.size()<=7 && date(d.startDate) && text(d.endDate,10) && text(d.time,5) && text(d.notes,2000) && d.enabled is bool && d.archived is bool && d.order is number && text(d.createdAt,40); }
+    function validRecord(id) { let d=request.resource.data; return allowed(['id','habitId','date','status','value','updatedAt']) && idMatches(id) && text(d.habitId,120) && id==d.habitId+'_'+d.date && date(d.date) && d.status in ['completed','missed','skipped','na','pending'] && d.value is number && d.value>=0 && d.value<=1000000 && text(d.updatedAt,40); }
+    function validTask(id) { let d=request.resource.data; return allowed(['id','title','date','time','minutes','priority','notes','done','createdAt']) && idMatches(id) && text(d.title,100) && d.title.size()>0 && date(d.date) && text(d.time,5) && d.minutes is number && d.minutes>=0 && d.minutes<=1440 && d.priority in ['low','normal','high'] && text(d.notes,2000) && d.done is bool && text(d.createdAt,40); }
+    function validGoal(id) { let d=request.resource.data; return allowed(['id','title','description','target','current','unit','deadline','milestone','relatedHabitId','status','createdAt']) && idMatches(id) && text(d.title,100) && d.title.size()>0 && text(d.description,2000) && d.target is number && d.target>0 && d.target<=100000000 && d.current is number && d.current>=0 && d.current<=d.target && text(d.unit,40) && text(d.deadline,10) && text(d.milestone,250) && text(d.relatedHabitId,120) && d.status in ['active','paused','completed'] && text(d.createdAt,40); }
+    function validMeal(id) { let d=request.resource.data; return allowed(['id','day','category','time','title','quantity','calories','protein','carbs','fat','notes','order']) && idMatches(id) && d.day is int && d.day>=0 && d.day<=6 && text(d.category,50) && text(d.time,5) && text(d.title,100) && d.title.size()>0 && text(d.quantity,100) && d.calories is number && d.calories>=0 && d.calories<=10000 && d.protein is number && d.protein>=0 && d.protein<=10000 && d.carbs is number && d.carbs>=0 && d.carbs<=10000 && d.fat is number && d.fat>=0 && d.fat<=10000 && text(d.notes,2000) && d.order is number; }
+    function validWorkout(id) { let d=request.resource.data; return allowed(['id','day','title','muscle','exercises','duration','notes','restDay','order']) && idMatches(id) && d.day is int && d.day>=0 && d.day<=6 && text(d.title,100) && d.title.size()>0 && text(d.muscle,100) && text(d.exercises,4000) && d.duration is number && d.duration>=0 && d.duration<=1440 && text(d.notes,2000) && d.restDay is bool && d.order is number; }
+    function validPlanRecord(id) { let d=request.resource.data; return allowed(['id','kind','planId','date','status']) && idMatches(id) && d.kind in ['meal','workout'] && text(d.planId,120) && id==d.kind+'_'+d.planId+'_'+d.date && date(d.date) && d.status in ['completed','missed','skipped','na','pending']; }
+    function validReview(id) { let d=request.resource.data; return allowed(['id','date','mood','energy','sleep','notes','wins']) && idMatches(id) && id==d.date && date(d.date) && d.mood is number && d.mood>=1 && d.mood<=5 && d.energy is number && d.energy>=1 && d.energy<=5 && d.sleep is number && d.sleep>=0 && d.sleep<=24 && text(d.notes,4000) && text(d.wins,1000); }
+    match /users/{uid} {
+      allow read, delete: if owner(uid);
+      allow create, update: if owner(uid) && request.resource.data.keys().hasOnly(['displayName','theme','weekStart','timeFormat','dailyReminder','createdAt']) && text(request.resource.data.displayName,60) && request.resource.data.theme in ['light','dark','system'] && request.resource.data.weekStart in [0,1] && request.resource.data.timeFormat in ['12','24'] && text(request.resource.data.dailyReminder,5) && text(request.resource.data.createdAt,40);
+      match /habits/{id} { allow read, delete: if owner(uid); allow create, update: if owner(uid) && validHabit(id); }
+      match /records/{id} { allow read, delete: if owner(uid); allow create, update: if owner(uid) && validRecord(id); }
+      match /tasks/{id} { allow read, delete: if owner(uid); allow create, update: if owner(uid) && validTask(id); }
+      match /goals/{id} { allow read, delete: if owner(uid); allow create, update: if owner(uid) && validGoal(id); }
+      match /meals/{id} { allow read, delete: if owner(uid); allow create, update: if owner(uid) && validMeal(id); }
+      match /workouts/{id} { allow read, delete: if owner(uid); allow create, update: if owner(uid) && validWorkout(id); }
+      match /planRecords/{id} { allow read, delete: if owner(uid); allow create, update: if owner(uid) && validPlanRecord(id); }
+      match /reviews/{id} { allow read, delete: if owner(uid); allow create, update: if owner(uid) && validReview(id); }
+    }
+  }
+}

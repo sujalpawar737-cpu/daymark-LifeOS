@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/modal.tsx","./src/lib/analytics.ts","./src/lib/date.ts","./src/lib/firebase.ts","./src/lib/store.ts","./src/lib/types.ts","./vite.config.ts","./capacitor.config.ts"],"version":"5.9.3"}
